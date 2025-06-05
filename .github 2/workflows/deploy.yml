@@ -1,0 +1,61 @@
+name: Deploy Hexo Blog to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # 你的默认分支，可以改为 master 或其他
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # 允许写入 GitHub Pages
+      id-token: write # 允许使用 GitHub Token
+    environment: # 移动到 jobs 级别
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # 1. 检出代码
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive # 如果主题使用 Git 子模块，启用此项
+
+      # 2. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # 使用 Node.js 20，确保兼容性
+
+      # 3. 缓存 NPM 依赖
+      - name: Cache NPM Dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
+
+      # 4. 安装依赖
+      - name: Install Dependencies
+        run: |
+          npm install -g hexo-cli  # 全局安装 Hexo CLI
+          npm install              # 安装项目依赖
+
+      # 5. 生成静态文件
+      - name: Build Hexo Site
+        run: |
+          npm run build || hexo generate  # 优先使用 package.json 中的 build 脚本
+          touch public/.nojekyll          # 添加 .nojekyll 禁用 Jekyll
+
+      # 6. 上传构建产物
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public # Hexo 默认输出目录
+
+      # 7. 部署到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
