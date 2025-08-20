@@ -1,5 +1,5 @@
 ---
-title: C 语言初识
+title: C 语言安装
 date: 2025-07-11 15:38:45
 tags:
   - HelloWorld起源
